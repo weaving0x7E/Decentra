@@ -224,4 +224,12 @@ contract DSCEngine is ReentrancyGuard {
     function getAccountInfo(address user, address token) public view returns (uint256, uint256) {
         return (s_collateralDeposited[user][token], s_DSCMinted[user]);
     }
+
+    function getHealthFactor(address user) public view returns (uint256) {
+        return _healthFactor(user);
+    }
+
+    function getLiquidationBonus() external pure returns (uint256) {
+        return LIQUIDATION_BONUS;
+    }
 }
