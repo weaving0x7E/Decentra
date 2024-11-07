@@ -139,7 +139,7 @@ contract DSCEngine is ReentrancyGuard {
     function mintDsc(uint256 amountDscToMint) public moreThanZero(amountDscToMint) nonReentrant {
         s_DSCMinted[msg.sender] += amountDscToMint;
         // if they mint too much
-        _revertIfHealthFactorIsBroken(msg.sender, amountDscToMint);
+        _revertIfHealthFactorIsBroken(msg.sender);
         bool minted = i_dsc.mint(msg.sender, amountDscToMint);
         if (!minted) {
             revert DSCEngine__MintFailed();
@@ -157,6 +157,9 @@ contract DSCEngine is ReentrancyGuard {
         nonReentrant
     {
         uint256 startingUserHealthFactor = _healthFactor(user);
+
+        console.log("startingUserHealthFactor", startingUserHealthFactor);
+
         if (startingUserHealthFactor >= MIN_HEALTH_FACTOR) {
             revert DSCEngine__HealthFactorOK();
         }
@@ -168,6 +171,7 @@ contract DSCEngine is ReentrancyGuard {
         _burnDsc(debtToCover, user, msg.sender);
 
         uint256 endingUserHealthFactor = _healthFactor(user);
+        console.log("endingUserHealthFactor", endingUserHealthFactor);
         if (endingUserHealthFactor <= startingUserHealthFactor) {
             revert DSCEngine__HealthFactorNotImproved();
         }
@@ -218,21 +222,9 @@ contract DSCEngine is ReentrancyGuard {
 
     function _expectedHealthFactor(address user, uint256 amountToMint) private view returns (uint256) {
         (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
-        console.log("CVI", collateralValueInUsd);
-
         uint256 collateralAdjustedForThreshold = (collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
 
-        // delete
-        console.log("CAFT", collateralAdjustedForThreshold);
-
         return (collateralAdjustedForThreshold * PRECISION) / (totalDscMinted + amountToMint);
-    }
-
-    function _revertIfHealthFactorIsBroken(address user, uint256 amountDscToMint) internal view {
-        uint256 userHealthFactor = _expectedHealthFactor(user, amountDscToMint);
-        if (userHealthFactor < MIN_HEALTH_FACTOR) {
-            revert DSCEngine__BreakHealthFactor();
-        }
     }
 
     function _revertIfHealthFactorIsBroken(address user) internal view {
@@ -269,7 +261,7 @@ contract DSCEngine is ReentrancyGuard {
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeed.latestRoundData();
-        return uint256(price) * ADDITIONAL_FEED_PRECISION / PRECISION * amount / PRECISION;
+        return uint256(price) * ADDITIONAL_FEED_PRECISION / PRECISION * amount;
     }
 
     function getAccountInfo(address user, address token) public view returns (uint256, uint256) {
