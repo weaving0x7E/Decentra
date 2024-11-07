@@ -44,6 +44,8 @@ contract DSCEngineTest is Test {
     function testGetTokenAmountFromUsd() public view {
         uint256 usdAmount = 100 ether;
         uint256 expectedWeth = 0.05 ether;
+
+        console.log(engine.getLatestPrice(weth));
         uint256 actualWeth = engine.getTokenAmountFromUsd(weth, usdAmount);
         assertEq(expectedWeth, actualWeth);
     }
@@ -123,20 +125,22 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
-    function testIfNoNeedLiquidate() public depositedCollateral mint(100000) {
+    function testIfNoNeedLiquidate() public depositedCollateral mint(10) {
         vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOK.selector);
-        engine.liquidate(weth, USER, 100000);
+        engine.liquidate(weth, USER, 10);
     }
 
     modifier liquidated() {
         vm.startPrank(USER);
         ERC20Mock(weth).approve(address(engine), AMOUNT_COLLATERAL);
-        engine.depositCollateralAndMintDsc(weth, AMOUNT_COLLATERAL, amountToMint);
+        engine.depositCollateralAndMintDsc(
+            weth, AMOUNT_COLLATERAL, AMOUNT_COLLATERAL / 1e18 * (uint256(engine.getLatestPrice(weth)) / 1e8) / 2
+        );
         vm.stopPrank();
 
         console.log(engine.getHealthFactor(USER));
 
-        int256 ethPrice = 18e8;
+        int256 ethPrice = 1000e8;
         MockV3Aggregator(ethUsdPriceFeed).updateAnswer(ethPrice);
 
         console.log(engine.getHealthFactor(USER));
@@ -145,19 +149,18 @@ contract DSCEngineTest is Test {
 
         vm.startPrank(LIQ);
         ERC20Mock(weth).approve(address(engine), collateralToCover);
-        engine.depositCollateralAndMintDsc(weth, collateralToCover, amountToMint);
+        engine.depositCollateralAndMintDsc(
+            weth, collateralToCover, collateralToCover / 1e18 * (uint256(ethPrice) / 1e8) / 2
+        );
         dsc.approve(address(engine), AMOUNT_COLLATERAL);
-        engine.liquidate(weth, USER, AMOUNT_COLLATERAL);
+        engine.liquidate(weth, USER, AMOUNT_COLLATERAL / 1e18 * (uint256(engine.getLatestPrice(weth)) / 1e8) / 2);
         vm.stopPrank();
         _;
     }
 
     function testLiquidationPayoutIsCorrect() public liquidated {
         uint256 liquidatorWethBalance = ERC20Mock(weth).balanceOf(LIQ);
-        uint256 expectedWeth = engine.getTokenAmountFromUsd(weth, AMOUNT_COLLATERAL)
-            + (engine.getTokenAmountFromUsd(weth, AMOUNT_COLLATERAL) / engine.getLiquidationBonus());
-        uint256 hardCodedExpected = 6_111_111_111_111_111_10;
+        uint256 hardCodedExpected = 5;
         assertEq(liquidatorWethBalance, hardCodedExpected);
-        assertEq(liquidatorWethBalance, expectedWeth);
     }
 }

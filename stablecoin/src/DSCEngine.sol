@@ -17,7 +17,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__HealthFactorNotImproved();
 
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
-    // uint256 private constant PRECISION = 1e18;
+    uint256 private constant PRECISION = 1e18;
     uint256 private constant LIQUIDATION_THRESHOLD = 50;
     uint256 private constant LIQUIDATION_PRECISION = 100;
     uint256 private constant LIQUIDATION_BONUS = 10;
@@ -112,7 +112,7 @@ contract DSCEngine is ReentrancyGuard {
     function mintDsc(uint256 amountDscToMint) public moreThanZero(amountDscToMint) nonReentrant {
         s_DSCMinted[msg.sender] += amountDscToMint;
         // if they mint too much
-        _revertIfHealthFactorIsBroken(msg.sender);
+        _revertIfHealthFactorIsBroken(msg.sender, amountDscToMint);
         bool minted = i_dsc.mint(msg.sender, amountDscToMint);
         if (!minted) {
             revert DSCEngine__MintFailed();
@@ -189,6 +189,21 @@ contract DSCEngine is ReentrancyGuard {
         return (collateralAdjustedForThreshold) / totalDscMinted;
     }
 
+    function _expectedHealthFactor(address user, uint256 amountToMint) private view returns (uint256) {
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
+
+        uint256 collateralAdjustedForThreshold =
+            ((collateralValueInUsd + amountToMint) * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
+        return (collateralAdjustedForThreshold) / totalDscMinted;
+    }
+
+    function _revertIfHealthFactorIsBroken(address user, uint256 amountDscToMint) internal view {
+        uint256 userHealthFactor = _expectedHealthFactor(user, amountDscToMint);
+        if (userHealthFactor < MIN_HEALTH_FACTOR) {
+            revert DSCEngine__BreakHealthFactor();
+        }
+    }
+
     function _revertIfHealthFactorIsBroken(address user) internal view {
         uint256 userHealthFactor = _healthFactor(user);
         if (userHealthFactor < MIN_HEALTH_FACTOR) {
@@ -212,13 +227,13 @@ contract DSCEngine is ReentrancyGuard {
         // 1 ETH = 2000 USD
         // The returned value from Chainlink will be 2000 * 1e8
         // Most USD pairs have 8 decimals, so we will just pretend they all do
-        return ((usdAmountInWei) / (uint256(price) * ADDITIONAL_FEED_PRECISION));
+        return ((usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION));
     }
 
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeed.latestRoundData();
-        return (uint256(price) * ADDITIONAL_FEED_PRECISION) * amount;
+        return (uint256(price) * ADDITIONAL_FEED_PRECISION) * amount / PRECISION;
     }
 
     function getAccountInfo(address user, address token) public view returns (uint256, uint256) {
@@ -231,5 +246,11 @@ contract DSCEngine is ReentrancyGuard {
 
     function getLiquidationBonus() external pure returns (uint256) {
         return LIQUIDATION_BONUS;
+    }
+
+    function getLatestPrice(address token) external view returns (int256) {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int256 price,,,) = priceFeed.latestRoundData();
+        return price;
     }
 }
