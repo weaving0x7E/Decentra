@@ -125,6 +125,23 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
+    function testRedeemCollateralWhenEthPriceDown() public {
+        vm.startPrank(USER);
+        ERC20Mock(weth).approve(address(engine), AMOUNT_COLLATERAL);
+        engine.depositCollateralAndMintDsc(weth, AMOUNT_COLLATERAL, AMOUNT_COLLATERAL * 1000);
+        vm.stopPrank();
+
+        int256 ethUsdUpdatedPrice = 999e8;
+        MockV3Aggregator(ethUsdPriceFeed).updateAnswer(ethUsdUpdatedPrice);
+
+        vm.startPrank(USER);
+        dsc.approve(address(engine), AMOUNT_COLLATERAL * 1000);
+        engine.redeemCollateralForDsc(weth, AMOUNT_COLLATERAL, AMOUNT_COLLATERAL * 1000);
+        vm.stopPrank();
+
+        assertEq(ERC20Mock(weth).balanceOf(USER), AMOUNT_COLLATERAL);
+    }
+
     function testIfNoNeedLiquidate() public depositedCollateral mint(10) {
         vm.expectRevert(DSCEngine.DSCEngine__HealthFactorOK.selector);
         engine.liquidate(weth, USER, 10);
