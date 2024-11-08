@@ -13,3 +13,6 @@
 [submodule "stablecoin/lib/chainlink-brownie-contracts"]
 	path = stablecoin/lib/chainlink-brownie-contracts
 	url = https://github.com/smartcontractkit/chainlink-brownie-contracts
+[submodule "airdrop/lib/forge-std"]
+	path = airdrop/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
