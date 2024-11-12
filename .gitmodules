@@ -37,3 +37,6 @@
 [submodule "upgradeableContract/lib/foundry-devops"]
 	path = upgradeableContract/lib/foundry-devops
 	url = https://github.com/cyfrin/foundry-devops
+[submodule "abstraction-acount/lib/forge-std"]
+	path = abstraction-acount/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
