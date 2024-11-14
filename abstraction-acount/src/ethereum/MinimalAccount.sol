@@ -18,6 +18,13 @@ contract MinimalAccount is IAccount, Ownable {
 
     modifier requireFromEntryPoint() {
         if (msg.sender != address(i_entryPoint) && msg.sender != owner()) {
+            revert MinimalAccount__NotFromEntryPoint();
+        }
+        _;
+    }
+
+    modifier requireFromEntryPointOrOwner() {
+        if (msg.sender != address(i_entryPoint) && msg.sender != owner()) {
             revert MinimalAccount__NotFromEntryPointOrOwner();
         }
         _;
@@ -27,9 +34,10 @@ contract MinimalAccount is IAccount, Ownable {
         i_entryPoint = IEntryPoint(entryPoint);
     }
 
+    // 没有这个函数的话直接向合约转账会交易失败
     receive() external payable {}
 
-    function execute(address dest, uint256 value, bytes calldata functionData) external requireFromEntryPoint {
+    function execute(address dest, uint256 value, bytes calldata functionData) external requireFromEntryPointOrOwner {
         (bool success, bytes memory result) = dest.call{value: value}(functionData);
         if (!success) {
             revert MinimalAccount__CallFailed(result);
