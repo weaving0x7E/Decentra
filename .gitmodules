@@ -49,3 +49,6 @@
 [submodule "abstraction-acount/lib/foundry-era-contracts"]
 	path = abstraction-acount/lib/foundry-era-contracts
 	url = https://github.com/Cyfrin/foundry-era-contracts
+[submodule "dao/lib/forge-std"]
+	path = dao/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
