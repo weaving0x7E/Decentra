@@ -41,4 +41,25 @@ contract MerkleAirDropTest is Test {
         console.log("ending balance", endingBalance);
         assertEq(endingBalance - initialBalance, AMOUNT);
     }
+
+    function testUnmatchedSignature() public {
+        (address random, uint256 privateKey) = makeAddrAndKey("random");
+        bytes32 digest = airdrop.getMessageHash(random, privateKey);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        vm.prank(gasPayer);
+        vm.expectRevert(MerkleAirdrop.MerkleAirdrop__InvalidSignature.selector);
+        airdrop.claim(user, AMOUNT, PROOF, v, r, s);
+    }
+
+    function testClaimMultiTimes() public {
+        bytes32 digest = airdrop.getMessageHash(user, AMOUNT);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, digest);
+
+        vm.prank(gasPayer);
+        airdrop.claim(user, AMOUNT, PROOF, v, r, s);
+        vm.expectRevert(MerkleAirdrop.MerkleAirdrop__AlreadyClaimed.selector);
+        airdrop.claim(user, AMOUNT, PROOF, v, r, s);
+    }
 }
