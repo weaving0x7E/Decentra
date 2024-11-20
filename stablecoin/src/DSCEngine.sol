@@ -32,7 +32,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
 contract DSCEngine is ReentrancyGuard {
     error DSCEngine__NeedsMoreThanZero();
     error DSCEngine__TokenAddressAndPriceFeedAddressesMustBeSameLength();
-    error DSCengine__NotAllowToken();
+    error DSCEngine__NotAllowToken();
     error DSCEngine__TransferFailed();
     error DSCEngine__BreakHealthFactor();
     error DSCEngine__MintFailed();
@@ -70,7 +70,7 @@ contract DSCEngine is ReentrancyGuard {
 
     modifier isAllowedToken(address token) {
         if (s_priceFeeds[token] == address(0)) {
-            revert DSCengine__NotAllowToken();
+            revert DSCEngine__NotAllowToken();
         }
         _;
     }
