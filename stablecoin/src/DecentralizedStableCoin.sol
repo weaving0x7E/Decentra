@@ -15,6 +15,7 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
     error DecentralizedStableCoin__MustBeMoreThanZero();
     error DecentralizedStableCoin__BurnAmountExceedsBalance();
     error DecentralizedStableCoin__NotZeroAddress();
+    error DecentralizedStableCoin__BlockFunction();
 
     constructor() ERC20("DecentralizedStableCoin", "DSC") Ownable(msg.sender) {}
 
@@ -29,10 +30,11 @@ contract DecentralizedStableCoin is ERC20Burnable, Ownable {
         super.burn(_amount);
     }
 
-    function mint(
-        address _to,
-        uint256 _amount
-    ) external onlyOwner returns (bool) {
+    function burnFrom(address, uint256) public pure override {
+        revert DecentralizedStableCoin__BlockFunction();
+    }
+
+    function mint(address _to, uint256 _amount) external onlyOwner returns (bool) {
         if (_to == address(0)) {
             revert DecentralizedStableCoin__NotZeroAddress();
         }
